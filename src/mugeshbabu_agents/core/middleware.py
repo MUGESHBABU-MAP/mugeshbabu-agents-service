@@ -48,15 +48,29 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Invalid Authorization header format. Expected 'Bearer <token>'"}
             )
 
-        # 3. Verify Token (Mock for now, or use PyJWT if secret is configured)
-        # In a real app: payload = jwt.decode(token, settings.auth.secret_key, algorithms=[settings.auth.algorithm])
-        if token == "invalid_token": # Simple mock check
+        # 3. Verify Token
+        try:
+            from mugeshbabu_agents.core.config import settings
+            import jwt
+            
+            payload = jwt.decode(
+                token, 
+                settings.auth.jwt_secret, 
+                algorithms=[settings.auth.jwt_algorithm]
+            )
+            # Inject user info into request state
+            request.state.user = payload
+            
+        except jwt.ExpiredSignatureError:
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"detail": "Invalid token"}
+                content={"detail": "Token has expired"}
             )
-
-        # 4. Inject user info into request state (optional)
-        request.state.user = {"id": "mock_user_id", "token": token}
-
+        except jwt.PyJWTError as e:
+            logger.error(f"JWT Verification Failed: {e}")
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Could not validate credentials"}
+            )
+            
         return await call_next(request)
