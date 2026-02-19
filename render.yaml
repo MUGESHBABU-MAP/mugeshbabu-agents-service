@@ -1,0 +1,33 @@
+services:
+  # 1. The FastAPI Backend
+  - type: web
+    name: mugeshbabu-agents-service
+    runtime: python
+    buildCommand: pip install -r pyproject.toml
+    startCommand: gunicorn mugeshbabu_agents.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:10000
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 10000
+      - key: APP_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false # User must provide this in dashboard
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: babuai-redis
+          property: connectionString
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+
+  # 2. Redis (Managed by Render)
+  - type: redis
+    name: babuai-redis
+    ipAllowList: [] # Access only from internal services
+    plan: free # Free tier Redis
