@@ -29,8 +29,10 @@ COPY pyproject.toml .
 # Let's stick to the user's request: "Install uv, compile dependencies."
 
 # Since we don't have a lockfile, we'll just install directly.
-RUN uv pip install --system --no-cache -r <(uv pip compile pyproject.toml) || \
-    # Fallback if compile fails (e.g. valid toml but no deps?)
+# Since we don't have a lockfile, we'll compile to requirements.txt first
+# This avoids shell syntax issues with <(...) in /bin/sh
+RUN uv pip compile pyproject.toml -o requirements.txt && \
+    uv pip install --system --no-cache -r requirements.txt || \
     pip install .
 
 # Stage 2: Runtime
