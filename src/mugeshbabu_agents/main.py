@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mugeshbabu_agents.core.config import settings
 from mugeshbabu_agents.infrastructure.db import db_manager
-from mugeshbabu_agents.api.v1 import agents, chat, documents
+from mugeshbabu_agents.api.v1 import agents, chat, documents, teams
 
 import logging
 
@@ -46,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(agents.router, prefix="/api/v1/agents", tags=["Agents"])
     app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
     app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
+    app.include_router(teams.router, prefix="/api/v1/teams", tags=["Teams"])
 
     @app.get("/health")
     async def health_check():
