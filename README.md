@@ -1,3 +1,13 @@
+---
+title: Mugeshbabu Agents Service
+emoji: 🤖
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+license: mit
+---
+
 # BabuAI (Mugeshbabu Agents Service)
 
 **BabuAI** is a high-performance Python microservice designed to orchestrate AI agents, manage teams, handle document processing (RAG), and support rich chat interactions. It replaces the legacy system with a modern, async-first architecture.
