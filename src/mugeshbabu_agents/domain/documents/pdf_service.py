@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import httpx
 from typing import Optional
 from playwright.async_api import async_playwright, Browser, Page
 
@@ -26,15 +27,37 @@ class PDFService:
             await self._playwright.stop()
             self._playwright = None
 
+    async def _download_direct_pdf(self, url: str) -> Optional[bytes]:
+        """Try to download PDF directly if Content-Type matches."""
+        try:
+            async with httpx.AsyncClient() as client:
+                # Use stream=True to peek at headers without downloading body yet
+                async with client.stream("GET", url, follow_redirects=True) as resp:
+                    resp.raise_for_status()
+                    content_type = resp.headers.get("content-type", "").lower()
+                    if "application/pdf" in content_type:
+                        logger.info(f"Target is already a PDF ({content_type}). Downloading directly...")
+                        content = await resp.aread()
+                        return content
+        except Exception as e:
+            logger.warning(f"Failed to check/download direct PDF: {e}")
+        return None
+
     async def generate_pdf(self, html_url: str) -> bytes:
         """
         Generate PDF from a URL.
-        - Wails for network idle.
-        - Waits for mermaid diagrams if detected.
-        - Injects print CSS.
+        1. Check if URL is already a PDF -> Download directly.
+        2. Else -> Render HTML with Playwright.
         """
+        # 1. Direct PDF Check
+        direct_pdf_bytes = await self._download_direct_pdf(html_url)
+        if direct_pdf_bytes:
+            # Upload to S3 (Mock) and return
+            await self._upload_to_s3(direct_pdf_bytes, f"doc_downloaded_{asyncio.get_event_loop().time()}.pdf")
+            return direct_pdf_bytes
+
+        # 2. Playwright Render
         browser = await self._get_browser()
-        # Create a new context per request (isolated cookies/storage)
         context = await browser.new_context()
         page = await context.new_page()
 
@@ -42,14 +65,10 @@ class PDFService:
             logger.info(f"Navigating to {html_url}")
             await page.goto(html_url, wait_until="networkidle")
 
-            # Check for mermaid diagrams and wait for them to render
-            # Assuming mermaid diagrams have class 'mermaid' and we wait for the svg to appear inside?
-            # Or just wait for the element to exist.
-            # Simple heuristic: if 'mermaid' appears in content, wait a bit or wait for selector.
+            # Check for mermaid diagrams
             content = await page.content()
             if "mermaid" in content:
                 logger.info("Mermaid diagrams detected, waiting for render...")
-                # Wait for at least one svg inside a mermaid div, or just a fixed delay if selector is unknown
                 try:
                     await page.wait_for_selector(".mermaid svg", timeout=5000) 
                 except Exception:
@@ -80,7 +99,6 @@ class PDFService:
     async def _upload_to_s3(self, file_bytes: bytes, key: str):
         """Mock S3 Upload"""
         logger.info(f"MOCK UPLOAD to S3 bucket 'babuai-docs': {key}")
-        # async with self.s3_client.put_object(...)
         await asyncio.sleep(0.01)
 
 pdf_service = PDFService()
