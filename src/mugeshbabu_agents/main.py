@@ -4,8 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from mugeshbabu_agents.core.config import settings
 from mugeshbabu_agents.core.middleware import AuthMiddleware
 from mugeshbabu_agents.infrastructure.db import db_manager
-from mugeshbabu_agents.infrastructure.db import db_manager
-from mugeshbabu_agents.api.v1 import agents, chat, documents, teams
+from mugeshbabu_agents.api.v1 import agents, chat, documents, teams, auth
 from mugeshbabu_agents.core.exceptions import global_exception_handler, http_exception_handler, validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -57,6 +56,7 @@ def create_app() -> FastAPI:
     app.add_middleware(AuthMiddleware)
 
     # Include Routers
+    app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
     app.include_router(agents.router, prefix="/api/v1/agents", tags=["Agents"])
     app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
     app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
