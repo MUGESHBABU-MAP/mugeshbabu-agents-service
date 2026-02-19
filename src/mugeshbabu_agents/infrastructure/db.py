@@ -37,7 +37,7 @@ class DatabaseManager:
         return self.client[db_name]
 
     def get_master_db(self) -> AsyncIOMotorDatabase:
-        if not self.master_db:
+        if self.master_db is None:
             raise RuntimeError("Database client is not initialized.")
         return self.master_db
 
