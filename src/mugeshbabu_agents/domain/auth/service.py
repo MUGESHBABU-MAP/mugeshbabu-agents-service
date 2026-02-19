@@ -7,7 +7,7 @@ from mugeshbabu_agents.infrastructure.db import db_manager
 from mugeshbabu_agents.domain.auth.models import User, UserCreate, UserLogin, Token, UserRepository
 
 # Password Context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 class AuthService:
     def __init__(self):
