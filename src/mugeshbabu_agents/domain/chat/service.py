@@ -11,7 +11,12 @@ from mugeshbabu_agents.core.config import settings
 from mugeshbabu_agents.infrastructure.db import db_manager
 from mugeshbabu_agents.domain.chat.models import Conversation, Message, ChatResponse
 
+from mugeshbabu_agents.infrastructure.repository import BaseRepository
+
 logger = logging.getLogger(__name__)
+
+class ConversationRepository(BaseRepository[Conversation]):
+    pass
 
 class ChatService:
     def __init__(self):
@@ -112,19 +117,19 @@ class ChatService:
         # Prompt said `mb_t_conversations`. I'll use that collection name.
         
         # 1. Get Conversation or Create New
+        repo = ConversationRepository(db, "mb_t_conversations", Conversation)
+        
         if conversation_id:
-            conv_data = await db.mb_t_conversations.find_one({"_id": ObjectId(conversation_id)})
-            if not conv_data:
+            conversation = await repo.get(conversation_id)
+            if not conversation:
                 raise ValueError("Conversation not found")
-            conversation = Conversation(**conv_data)
         else:
             conversation = Conversation(
                 project_id=project_id,
                 document_url=document_url,
                 messages=[]
             )
-            res = await db.mb_t_conversations.insert_one(conversation.model_dump(by_alias=True))
-            conversation.id = res.inserted_id
+            conversation = await repo.create(conversation)
 
         # 2. Get Chunks (Cache/Process)
         chunks = await self._get_or_create_chunks(document_url)
@@ -144,10 +149,8 @@ class ChatService:
         conversation.updated_at = datetime.utcnow()
 
         # 6. Save to DB
-        await db.mb_t_conversations.update_one(
-            {"_id": conversation.id},
-            {"$set": conversation.model_dump(by_alias=True, exclude={"id"})}
-        )
+        # 6. Save to DB
+        await repo.update(conversation.id, conversation.model_dump(by_alias=True, exclude={"id"}))
 
         return ChatResponse(
             answer=answer_text,

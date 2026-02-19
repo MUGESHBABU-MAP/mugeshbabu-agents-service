@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mugeshbabu_agents.core.config import settings
+from mugeshbabu_agents.core.middleware import AuthMiddleware
 from mugeshbabu_agents.infrastructure.db import db_manager
 from mugeshbabu_agents.infrastructure.db import db_manager
 from mugeshbabu_agents.api.v1 import agents, chat, documents, teams
@@ -50,6 +51,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Auth Middleware (JWT)
+    # Public paths are excluded inside the middleware class (health, docs, etc.)
+    app.add_middleware(AuthMiddleware)
 
     # Include Routers
     app.include_router(agents.router, prefix="/api/v1/agents", tags=["Agents"])

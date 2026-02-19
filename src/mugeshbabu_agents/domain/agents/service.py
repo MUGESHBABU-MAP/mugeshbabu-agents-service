@@ -6,12 +6,19 @@ from typing import Any, Dict, Optional
 from mugeshbabu_agents.core.config import settings
 from mugeshbabu_agents.domain.agents.models import Agent, AgentInstance
 from mugeshbabu_agents.infrastructure.db import db_manager
+from mugeshbabu_agents.infrastructure.repository import BaseRepository
 
 # Placeholder for AWS integration - in a real app, this would be injected or imported from infrastructure/aws.py
 # using boto3 or aiobotocore
 import asyncio
 
 logger = logging.getLogger(__name__)
+
+class AgentRepository(BaseRepository[Agent]):
+    pass
+
+class AgentInstanceRepository(BaseRepository[AgentInstance]):
+    pass
 
 class AgentService:
     def __init__(self):
@@ -21,11 +28,11 @@ class AgentService:
     async def get_master_agent(self, agent_id: str) -> Optional[Agent]:
         """
         Fetch master agent definition from DB.
-        Mocking this for the initial scaffold since we don't have seeds yet.
         """
-        db = db_manager.get_master_db()
-        # doc = await db.agents.find_one({"_id": ObjectId(agent_id)})
-        # if doc: return Agent(**doc)
+        # In a real app, we would initialize repositories in __init__
+        # For now, we mock the return as before, but showing how repo would be used:
+        # repo = AgentRepository(db_manager.get_master_db(), "agents", Agent)
+        # return await repo.get(agent_id)
         
         # MOCK RETURN
         return Agent(
@@ -85,10 +92,10 @@ class AgentService:
             status="PENDING"
         )
         
-        # Save to Project-specific DB
+        # Save to Project-specific DB using Repository
         project_db = db_manager.get_project_db(project_id)
-        result = await project_db.agent_instances.insert_one(instance.model_dump(by_alias=True))
-        instance.id = result.inserted_id
+        repo = AgentInstanceRepository(project_db, "agent_instances", AgentInstance)
+        instance = await repo.create(instance)
 
         # 3. Resolve MCP Configs
         mcp_config = await self.resolve_mcp_config(agent, project_id)
@@ -109,17 +116,12 @@ class AgentService:
             await self.push_to_sqs(sqs_message)
             
             # Update status to QUEUED if needed, or keep as PENDING
-            await project_db.agent_instances.update_one(
-                {"_id": instance.id},
-                {"$set": {"status": "QUEUED", "updated_at": datetime.utcnow()}}
-            )
+            # Update status to QUEUED if needed, or keep as PENDING
+            await repo.update(instance.id, {"status": "QUEUED", "updated_at": datetime.utcnow()})
             instance.status = "QUEUED"
         except Exception as e:
             logger.error(f"Failed to push to SQS: {e}")
-            await project_db.agent_instances.update_one(
-                {"_id": instance.id},
-                {"$set": {"status": "FAILED", "result": {"error": str(e)}, "updated_at": datetime.utcnow()}}
-            )
+            await repo.update(instance.id, {"status": "FAILED", "result": {"error": str(e)}, "updated_at": datetime.utcnow()})
             instance.status = "FAILED"
             raise e
 
