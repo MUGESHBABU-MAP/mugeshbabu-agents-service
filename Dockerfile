@@ -65,14 +65,12 @@ COPY pyproject.toml /app/
 ENV PYTHONPATH=/app/src
 ENV APP_ENV=production
 
-# Expose port
-EXPOSE 8000
+# Expose port (7860 is standard for Hugging Face Spaces)
+EXPOSE 7860
 
 # Install Gunicorn for production process management
 RUN pip install gunicorn
 
 # Command: Use Gunicorn with Uvicorn worker class
-# -w 4:  Number of workers (adjust based on CPU cores, e.g. 2 * CPU + 1)
-# -k:    Worker class
-# -b:    Bind address
-CMD ["gunicorn", "mugeshbabu_agents.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000"]
+# Bind to $PORT if set, otherwise default to 7860 (Hugging Face default)
+CMD ["sh", "-c", "gunicorn mugeshbabu_agents.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${PORT:-7860}"]
