@@ -52,8 +52,9 @@ class PDFService:
         # 1. Direct PDF Check
         direct_pdf_bytes = await self._download_direct_pdf(html_url)
         if direct_pdf_bytes:
-            # Upload to S3 (Mock) and return
-            await self._upload_to_s3(direct_pdf_bytes, f"doc_downloaded_{asyncio.get_event_loop().time()}.pdf")
+            # Upload to S3 (Mock) AND Save Locally concurrently
+            file_key = f"doc_downloaded_{asyncio.get_event_loop().time()}.pdf"
+            await self._process_storage(direct_pdf_bytes, file_key)
             return direct_pdf_bytes
 
         # 2. Playwright Render
@@ -84,8 +85,9 @@ class PDFService:
             pdf_bytes = await page.pdf(format="A4", print_background=True)
             logger.info(f"PDF generated: {len(pdf_bytes)} bytes")
 
-            # Upload to S3 (Mock)
-            await self._upload_to_s3(pdf_bytes, f"doc_{asyncio.get_event_loop().time()}.pdf")
+            # Upload to S3 (Mock) AND Save Locally concurrently
+            file_key = f"doc_{asyncio.get_event_loop().time()}.pdf"
+            await self._process_storage(pdf_bytes, file_key)
 
             return pdf_bytes
 
@@ -96,9 +98,35 @@ class PDFService:
             await page.close()
             await context.close()
 
+    async def _process_storage(self, file_bytes: bytes, key: str):
+        """Run S3 upload and Local Save concurrently."""
+        try:
+            await asyncio.gather(
+                self._upload_to_s3(file_bytes, key),
+                self._save_to_local(file_bytes, key)
+            )
+        except Exception as e:
+            logger.error(f"Storage processing failed: {e}")
+            # Don't raise here if you want to return the bytes to the user regardless of storage failure
+            # But usually we might want to know. For now, just log.
+
     async def _upload_to_s3(self, file_bytes: bytes, key: str):
         """Mock S3 Upload"""
-        logger.info(f"MOCK UPLOAD to S3 bucket 'babuai-docs': {key}")
-        await asyncio.sleep(0.01)
+        logger.info(f"Starting MOCK UPLOAD to S3 bucket 'babuai-docs': {key}")
+        await asyncio.sleep(0.5) # Simulate latency
+        logger.info(f"Completed MOCK UPLOAD to S3: {key}")
+
+    async def _save_to_local(self, file_bytes: bytes, filename: str):
+        """Save bytes to local downloads directory."""
+        import os, aiofiles
+        
+        local_dir = "downloads"
+        os.makedirs(local_dir, exist_ok=True)
+        file_path = os.path.join(local_dir, filename)
+        
+        logger.info(f"Starting LOCAL SAVE to: {file_path}")
+        async with aiofiles.open(file_path, 'wb') as f:
+            await f.write(file_bytes)
+        logger.info(f"Completed LOCAL SAVE: {file_path}")
 
 pdf_service = PDFService()
