@@ -49,11 +49,11 @@ uv pip install -r pyproject.toml
 *Note: If you don't use `uv`, just use standard `pip install .`*
 
 ### 4. Install Playwright Browsers
-Required for PDF generation:
+Required for PDF generation. On macOS/Windows, just install the browser binary:
 ```bash
 playwright install chromium
-playwright install-deps # On Linux/Docker
 ```
+*Note: `playwright install-deps` is generally for Linux distributions and Docker environments.*
 
 ## 🏃‍♂️ Running the App
 
@@ -62,7 +62,8 @@ Start the hot-reloading server:
 ```bash
 uv run uvicorn mugeshbabu_agents.main:app --reload --host 0.0.0.0 --port 8000
 ```
-Access Swagger UI at: `http://localhost:8000/docs`
+*   **Swagger UI**: `http://localhost:8000/docs`
+*   **Health Check**: `http://localhost:8000/health`
 
 ### Docker (Production)
 Build and run the container:
@@ -91,3 +92,16 @@ Run tests using `pytest` (once implemented):
 ```bash
 uv run pytest
 ```
+
+## ⚠️ Troubleshooting
+
+**Build Error (`ValueError: Unable to determine which files to ship...`)**
+Ensure `pyproject.toml` includes:
+```toml
+[tool.hatch.build.targets.wheel]
+packages = ["src/mugeshbabu_agents"]
+```
+(This has been fixed in the repo).
+
+**Playwright Installation Fails**
+If `playwright install-deps` fails on macOS, simply run `playwright install chromium`. The dependencies command is for Linux systems.
