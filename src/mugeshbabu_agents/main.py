@@ -3,7 +3,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mugeshbabu_agents.core.config import settings
 from mugeshbabu_agents.infrastructure.db import db_manager
+from mugeshbabu_agents.infrastructure.db import db_manager
 from mugeshbabu_agents.api.v1 import agents, chat, documents, teams
+from mugeshbabu_agents.core.exceptions import global_exception_handler, http_exception_handler, validation_exception_handler
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import logging
 
@@ -32,6 +36,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
         debug=settings.app.debug
     )
+
+    # Exception Handlers
+    app.add_exception_handler(Exception, global_exception_handler)
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
     # CORS Middleware
     app.add_middleware(

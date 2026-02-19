@@ -68,5 +68,11 @@ ENV APP_ENV=production
 # Expose port
 EXPOSE 8000
 
-# Command
-CMD ["uvicorn", "mugeshbabu_agents.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Install Gunicorn for production process management
+RUN pip install gunicorn
+
+# Command: Use Gunicorn with Uvicorn worker class
+# -w 4:  Number of workers (adjust based on CPU cores, e.g. 2 * CPU + 1)
+# -k:    Worker class
+# -b:    Bind address
+CMD ["gunicorn", "mugeshbabu_agents.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000"]
