@@ -20,6 +20,8 @@ dependencies = [
     "rank-bm25>=0.2.2",
     "beautifulsoup4>=4.12.3",
     "aiofiles>=25.1.0",
+    "passlib[bcrypt]>=1.7.4",
+    "email-validator>=2.3.0",
 ]
 
 [build-system]
