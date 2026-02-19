@@ -41,6 +41,14 @@ def create_app() -> FastAPI:
     app.add_exception_handler(Exception, global_exception_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    
+    # Rate Limiting
+    from slowapi.errors import RateLimitExceeded
+    from slowapi import _rate_limit_exceeded_handler
+    from mugeshbabu_agents.core.rate_limit import limiter
+    
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     # CORS Middleware
     app.add_middleware(

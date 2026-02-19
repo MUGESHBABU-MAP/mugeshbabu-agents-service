@@ -19,7 +19,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/health",
             "/docs",
             "/openapi.json",
-            "/redoc"
+            "/redoc",
+            "/api/v1/auth" # Login and Signup must be public
         ])
 
     async def dispatch(self, request: Request, call_next):
